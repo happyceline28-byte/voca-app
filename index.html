@@ -82,6 +82,7 @@
     .btn.gold { background: var(--gold); color: #3b2a00; }
     .btn.full { width: 100%; }
     .btn:disabled { background: #d9d0c3; color: #fff; cursor: not-allowed; }
+    .btn.ghost:disabled { background: #fff; color: #b9aea0; border-color: #d9d0c3; }
     .btn.small { padding: 7px 12px; font-size: .85rem; border-radius: 10px; }
     .row { display: flex; gap: 8px; margin-top: 10px; }
     .row .btn { flex: 1; padding: 12px 6px; }
@@ -219,6 +220,8 @@
       padding: 11px 12px; font-size: 1rem; background: #fff;
     }
     .searchbar input:focus, .field input:focus { outline: none; border-color: var(--red); }
+    .danger-link { background: none; color: var(--bad); font-weight: 800; font-size: .9rem; text-decoration: underline; padding: 8px 12px; }
+    .loading { text-align: center; color: var(--muted); padding: 36px 10px; }
 
     /* 모달 */
     .modal {
@@ -250,13 +253,13 @@
     }
     .field small { display: block; font-weight: 500; color: var(--muted); margin-top: 3px; }
     .note { margin-top: 12px; font-size: .8rem; color: var(--muted); line-height: 1.5; text-align: center; }
-    .err { color: var(--bad); font-weight: 800; min-height: 22px; margin-bottom: 6px; font-size: .9rem; }
+    .err { color: var(--bad); font-weight: 800; min-height: 22px; margin-bottom: 6px; font-size: .9rem; line-height: 1.4; }
     .switch { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: .9rem; }
     .switch .btn { margin-top: 8px; }
     .me-card { display: flex; align-items: center; gap: 12px; background: #fff8e6; border: 1px solid var(--gold); border-radius: 16px; padding: 12px; margin-bottom: 14px; }
     .me-card b { font-size: 1.1rem; display: block; }
     .me-card small { color: var(--muted); }
-    .fab-row { position: sticky; bottom: -26px; display: flex; justify-content: flex-end; padding: 12px 0 0; background: linear-gradient(to top, var(--bg) 70%, transparent); }
+    .fab-row { position: sticky; bottom: -26px; display: flex; justify-content: space-between; align-items: center; padding: 12px 0 0; background: linear-gradient(to top, var(--bg) 70%, transparent); }
     .avatar-preview { text-align: center; margin: 4px 0 14px; }
     .opt-title { font-weight: 800; font-size: .9rem; margin: 12px 0 6px; }
     .grid { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -268,10 +271,9 @@
     .grid button.locked { background: #f1ebe2; border-style: dashed; }
     .grid button.locked > span:first-child { filter: grayscale(1); opacity: .45; }
     .grid button.sw { height: 44px; width: 44px; }
-    .unlock-info { text-align: center; background: #fff8e6; border: 1px solid var(--gold); border-radius: 12px; padding: 9px 10px; font-size: .85rem; color: #6b4a00; margin-bottom: 4px; line-height: 1.5; }
     .grid button.on { border-color: var(--red); background: #fff0ee; }
     .grid button.sw { border-radius: 50%; }
-    .grid button.none { font-size: .75rem; font-weight: 800; color: var(--muted); }
+    .unlock-info { text-align: center; background: #fff8e6; border: 1px solid var(--gold); border-radius: 12px; padding: 9px 10px; font-size: .85rem; color: #6b4a00; margin-bottom: 4px; line-height: 1.5; }
 
     .toast {
       position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(20px);
@@ -364,6 +366,8 @@
   <script src="words1.js"></script>
   <script src="words2.js"></script>
   <script src="words3.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
   <script>
     const $ = s => document.querySelector(s);
     const store = {
@@ -374,36 +378,63 @@
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const byId = Object.fromEntries(WORDS.map(w => [w.id, w]));
 
-    /* ================= 데이터: 계정 / 게스트 =================
-       ⚠ 서버가 없어서 모든 계정은 '이 브라우저 안'에만 저장돼요. */
-    const DEFAULT_AVATAR = { face: "🐱", bg: "#ffd9a8", acc: "" };
+    /* ================= 서버 연결 (Supabase) =================
+       로그인한 사람의 데이터는 서버에 저장돼서 어느 기기에서든 같아요.
+       로그인하지 않은 '게스트'의 단어장과 점수는 이 브라우저에만 저장돼요. */
+    const CFG = window.APP_CONFIG || {};
+    const hasServer = !!(CFG.SUPABASE_URL && CFG.SUPABASE_KEY && window.supabase);
+    const sb = hasServer ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_KEY) : null;
+    const emailOf = id => `${id}@${CFG.EMAIL_DOMAIN || "voca-app.example.com"}`;
+    const MIN_PW = 6;
     const Q_NEED = 10;
-    const DB = {
-      users: store.get("users", {}),
-      session: store.get("session", null),
-      guest: store.get("guest", null) || { mine: store.get("mine", []), best: store.get("best", 0), total: store.get("total", 0) }
-    };
-    if (DB.session && !DB.users[DB.session]) DB.session = null;
-    const save = () => { store.set("users", DB.users); store.set("session", DB.session); store.set("guest", DB.guest); };
-    const loggedIn = () => !!DB.session;
-    const me = () => (DB.session ? DB.users[DB.session] : DB.guest);
+    const DEFAULT_AVATAR = { face: "🐱", bg: "#ffd9a8", acc: "" };
+
+    let ME = null;   // 로그인한 사람: { id, username, avatar, best, total, mine }
+    const guest = store.get("guest", null) || { mine: store.get("mine", []), best: store.get("best", 0), total: store.get("total", 0) };
+    const saveGuest = () => store.set("guest", guest);
+    const loggedIn = () => !!ME;
+    const me = () => ME || guest;
     const myWords = () => me().mine.filter(id => byId[id]);
     const hasMine = id => me().mine.includes(id);
+
+    let mineTimer;
+    function syncMine() {
+      clearTimeout(mineTimer);
+      mineTimer = setTimeout(async () => {
+        if (!ME) return;
+        const { error } = await sb.from("word_lists").upsert({ user_id: ME.id, mine: ME.mine });
+        if (error) toast("단어장을 저장하지 못했어요. 인터넷을 확인해 주세요");
+      }, 400);
+    }
     function toggleMine(id) {
       const m = me(), i = m.mine.indexOf(id);
       if (i >= 0) m.mine.splice(i, 1); else m.mine.push(id);
-      save(); return i < 0;
+      if (ME) syncMine(); else saveGuest();
+      return i < 0;
     }
-
-    /* ---------- 비밀번호 해시 (PBKDF2) ---------- */
-    const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
-    async function hashPw(pw, salt) {
-      if (!(window.crypto && crypto.subtle)) throw new Error("nocrypto");
-      const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
-      const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 100000, hash: "SHA-256" }, key, 256);
-      return toHex(bits);
+    async function loadMe() {
+      if (!hasServer) { ME = null; return; }
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { ME = null; return; }
+      const uid = session.user.id;
+      const [p, w] = await Promise.all([
+        sb.from("profiles").select("id,username,avatar,best,total").eq("id", uid).single(),
+        sb.from("word_lists").select("mine").eq("user_id", uid).single()
+      ]);
+      if (p.error || !p.data) { ME = null; return; }
+      ME = { ...p.data, mine: (w.data && w.data.mine) || [] };
     }
-    const newSalt = () => toHex(crypto.getRandomValues(new Uint8Array(16)));
+    async function refreshMyStats() {
+      if (!ME) return;
+      const { data } = await sb.from("profiles").select("avatar,best,total").eq("id", ME.id).single();
+      if (data) Object.assign(ME, data);
+    }
+    async function fetchFriends() {
+      const { data, error } = await sb.from("friendships")
+        .select("friend:profiles!friendships_friend_id_fkey(id,username,avatar,best,total)").eq("user_id", ME.id);
+      if (error) return null;
+      return data.map(r => r.friend).filter(Boolean);
+    }
 
     /* ---------- 소리 ---------- */
     let zhVoice = null;
@@ -424,18 +455,21 @@
     let toastTimer;
     function toast(msg) {
       const t = $("#toast"); t.textContent = msg; t.classList.add("show");
-      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
     }
 
     /* ---------- 모달 ---------- */
+    let modalTok = 0;   // 모달이 닫히거나 바뀐 뒤 늦게 도착한 결과를 무시하려는 번호
     function openModal(html) {
+      modalTok++;
       $("#modalBody").innerHTML = html; $("#modal").classList.add("open"); $(".sheet").scrollTop = 0;
       addPwToggles($("#modalBody"));
     }
-    // 비밀번호 칸마다 '보기/숨기기' 버튼 붙이기
+    function closeModal() { modalTok++; $("#modal").classList.remove("open"); }
+    $("#modalX").onclick = closeModal;
+    $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
     function addPwToggles(root) {
       root.querySelectorAll('input[type="password"]').forEach(inp => {
-        // 보기 상태(text)에서도 폰이 첫 글자를 대문자로 바꾸거나 자동수정하지 않게
         inp.setAttribute("autocapitalize", "off"); inp.setAttribute("autocorrect", "off"); inp.setAttribute("spellcheck", "false");
         const wrap = document.createElement("div");
         wrap.className = "pwwrap";
@@ -454,12 +488,8 @@
         wrap.appendChild(b);
       });
     }
-    function closeModal() { $("#modal").classList.remove("open"); }
-    $("#modalX").onclick = closeModal;
-    $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
 
-    /* ---------- 아바타 ---------- */
-    // need = 이 아바타를 쓰려면 필요한 누적 점수
+    /* ---------- 아바타 (잠금 해제: 누적 점수) ---------- */
     const FACES = [
       ["🐱", 0], ["🐶", 0], ["🐭", 0], ["🐹", 0], ["😀", 0],
       ["🐰", 100], ["🐻", 100], ["🐼", 100], ["🐥", 100],
@@ -476,8 +506,17 @@
     ];
     const isOpen = (item, total) => total >= item.need;
     const unlockedKeys = total => [...FACES, ...ACCS].filter(x => x.e && isOpen(x, total)).map(x => x.e);
+    // 서버에서 온 아바타는 믿지 않고, 정해진 목록에 있는 값만 써요 (남이 이상한 글자를 넣어도 안전)
+    function cleanAvatar(a) {
+      a = a || {};
+      return {
+        face: FACES.some(f => f.e === a.face) ? a.face : DEFAULT_AVATAR.face,
+        bg: BGS.includes(a.bg) ? a.bg : DEFAULT_AVATAR.bg,
+        acc: ACCS.some(x => x.e === a.acc) ? a.acc : ""
+      };
+    }
     function avatarHtml(a, size = 44) {
-      a = a || DEFAULT_AVATAR;
+      a = cleanAvatar(a);
       const acc = ACCS.find(x => x.e === a.acc);
       return `<span class="avatar" style="width:${size}px;height:${size}px;background:${a.bg};font-size:${Math.round(size * 0.58)}px">` +
         `<span>${a.face}</span>` +
@@ -486,20 +525,24 @@
 
     /* ---------- 상단 바 ---------- */
     function renderHeader() {
-      const u = loggedIn() ? me() : null;
-      $("#profileBtn").innerHTML = (u ? avatarHtml(u.avatar, 24) : "👤") + " 프로필";
-      $("#authBtn").textContent = u ? "로그아웃" : "로그인";
-      $("#sub").textContent = u ? `${DB.session}님, 환영해요!` : "新 HSK 1~3급 단어 600개";
+      $("#profileBtn").innerHTML = (ME ? avatarHtml(ME.avatar, 24) : "👤") + " 프로필";
+      $("#authBtn").textContent = ME ? "로그아웃" : "로그인";
+      $("#sub").textContent = ME ? `${ME.username}님, 환영해요!` : "新 HSK 1~3급 단어 600개";
     }
-    $("#authBtn").onclick = () => {
-      if (loggedIn()) { DB.session = null; save(); refreshAll(); toast("로그아웃했어요"); }
-      else openAuth("login");
+    $("#authBtn").onclick = async () => {
+      if (ME) {
+        await sb.auth.signOut(); ME = null; refreshAll(); toast("로그아웃했어요");
+      } else openAuth("login");
     };
     $("#profileBtn").onclick = openFriendList;
 
     /* ================= 로그인 / 회원가입 ================= */
     function openAuth(mode) {
       const isLogin = mode === "login";
+      if (!hasServer) {
+        openModal(`<h2>${isLogin ? "🔑 로그인" : "📝 회원가입"}</h2><div class="empty"><div class="big">🛠️</div>서버 설정이 아직 끝나지 않아서<br>지금은 로그인을 쓸 수 없어요.</div>`);
+        return;
+      }
       openModal(`
         <h2>${isLogin ? "🔑 로그인" : "📝 회원가입"}</h2>
         <form id="authForm" autocomplete="off">
@@ -509,13 +552,13 @@
           </label>
           <label class="field">비밀번호
             <input id="aPw" type="password" placeholder="비밀번호">
-            ${isLogin ? "" : "<small>4자 이상</small>"}
+            ${isLogin ? "" : `<small>${MIN_PW}자 이상</small>`}
           </label>
           ${isLogin ? "" : `<label class="field">비밀번호 확인<input id="aPw2" type="password" placeholder="비밀번호 다시 입력"></label>`}
           <div class="err" id="aErr"></div>
-          <button class="btn full" type="submit">${isLogin ? "로그인" : "가입하기"}</button>
+          <button class="btn full" type="submit" id="aSubmit">${isLogin ? "로그인" : "가입하기"}</button>
         </form>
-        ${isLogin ? `<p class="note">ℹ️ 계정은 가입한 <b>브라우저·기기</b>에만 저장돼요. 다른 기기에서는 새로 가입해야 해요.</p>` : ""}
+        ${isLogin ? `<p class="note">ℹ️ 한 번 가입하면 어떤 기기에서든 같은 아이디로 로그인할 수 있어요.</p>` : ""}
         <div class="switch">
           ${isLogin ? "아직 계정이 없나요?" : "이미 계정이 있나요?"}
           <button class="btn ghost full" id="switchBtn">${isLogin ? "회원가입" : "로그인으로 돌아가기"}</button>
@@ -524,41 +567,48 @@
       $("#authForm").onsubmit = e => { e.preventDefault(); (isLogin ? doLogin : doSignup)(); };
       setTimeout(() => $("#aId").focus(), 50);
     }
-    const setErr = m => { $("#aErr").textContent = m; };
+    const setErr = m => { const e = $("#aErr"); if (e) e.textContent = m; };
+    const setBusy = on => { const b = $("#aSubmit"); if (b) { b.disabled = on; if (on) b.textContent = "잠깐만요…"; } };
+    function authMsg(error) {
+      const m = (error && error.message) || "";
+      if (/invalid login credentials/i.test(m)) return "아이디 또는 비밀번호가 맞지 않아요.";
+      if (/already registered|already been registered|duplicate/i.test(m)) return "이미 사용 중인 아이디예요.";
+      if (/password.*(at least|short|weak)/i.test(m)) return `비밀번호는 ${MIN_PW}자 이상이어야 해요.`;
+      if (/rate limit|too many/i.test(m)) return "시도가 너무 많아요. 잠시 뒤에 다시 해 주세요.";
+      if (/fetch|network/i.test(m)) return "인터넷에 연결되지 않았어요.";
+      return "문제가 생겼어요: " + m;
+    }
 
     async function doLogin() {
       const id = $("#aId").value.trim().toLowerCase(), pw = $("#aPw").value;
       if (!id || !pw) return setErr("아이디와 비밀번호를 입력해 주세요.");
-      const u = DB.users[id];
-      if (!u) {
-        const n = Object.keys(DB.users).length;
-        return setErr(`'${id}' 아이디가 이 브라우저에 없어요. 계정은 가입한 브라우저·주소에만 저장돼요. ` +
-          (n ? `(여기에 가입된 계정: ${n}개)` : "(여기에는 가입된 계정이 아직 없어요)"));
-      }
-      try {
-        if ((await hashPw(pw, u.salt)) !== u.hash) return setErr("비밀번호가 맞지 않아요. 대문자·소문자와 띄어쓰기를 확인해 보세요. (👁 보기로 확인할 수 있어요)");
-      } catch (e) { return setErr("이 환경에서는 로그인을 할 수 없어요."); }
-      DB.session = id; save(); closeModal(); refreshAll(); toast(`${id}님, 환영해요! 👋`);
+      setBusy(true);
+      const { error } = await sb.auth.signInWithPassword({ email: emailOf(id), password: pw });
+      if (error) { setBusy(false); const b = $("#aSubmit"); if (b) b.textContent = "로그인"; return setErr(authMsg(error)); }
+      await loadMe();
+      if (!ME) { await sb.auth.signOut(); setBusy(false); return setErr("프로필을 불러오지 못했어요. 잠시 뒤 다시 해 주세요."); }
+      closeModal(); refreshAll(); toast(`${ME.username}님, 환영해요! 👋`);
     }
 
     async function doSignup() {
       const id = $("#aId").value.trim().toLowerCase(), pw = $("#aPw").value, pw2 = $("#aPw2").value;
       if (!/^[a-z0-9_]{3,12}$/.test(id)) return setErr("아이디는 영문 소문자·숫자·_ 로 3~12자예요.");
-      if (pw.length < 4) return setErr("비밀번호는 4자 이상이어야 해요.");
+      if (pw.length < MIN_PW) return setErr(`비밀번호는 ${MIN_PW}자 이상이어야 해요.`);
       if (pw !== pw2) return setErr("비밀번호 확인이 일치하지 않아요.");
-      if (DB.users[id]) return setErr("이미 사용 중인 아이디예요.");
-      let salt, hash;
-      try { salt = newSalt(); hash = await hashPw(pw, salt); }
-      catch (e) { return setErr("이 환경에서는 회원가입을 할 수 없어요."); }
-      const g = DB.guest;
-      DB.users[id] = {
-        salt, hash, avatar: { ...DEFAULT_AVATAR }, friends: [],
-        mine: [...g.mine], best: g.best, total: g.total, created: Date.now()
-      };
-      const imported = g.mine.length > 0;
-      DB.guest = { mine: [], best: 0, total: 0 };   // 한 번 가져간 게스트 기록은 비움
-      DB.session = id; save(); closeModal(); refreshAll();
-      toast(imported ?"가입 완료! 저장해 둔 단어도 가져왔어요 🎉" : "가입 완료! 환영해요 🎉");
+      setBusy(true);
+      const { data, error } = await sb.auth.signUp({ email: emailOf(id), password: pw, options: { data: { username: id } } });
+      const reset = () => { setBusy(false); const b = $("#aSubmit"); if (b) b.textContent = "가입하기"; };
+      if (error) { reset(); return setErr(authMsg(error)); }
+      if (!data.session) { reset(); return setErr("가입은 됐지만 로그인이 안 됐어요. 서버 설정(이메일 확인 끄기)을 확인해야 해요."); }
+      await loadMe();
+      if (!ME) { reset(); return setErr("프로필을 만들지 못했어요. 서버 설정(SQL)을 확인해야 해요."); }
+      const imported = guest.mine.length > 0;
+      if (imported) {               // 게스트로 모아 둔 단어는 내 계정으로 옮겨요
+        ME.mine = [...new Set([...ME.mine, ...guest.mine])];
+        guest.mine = []; saveGuest(); syncMine();
+      }
+      closeModal(); refreshAll();
+      toast(imported ? "가입 완료! 모아 둔 단어도 가져왔어요 🎉" : "가입 완료! 환영해요 🎉");
     }
 
     /* ================= 친구 목록 (프로필 버튼) + 아바타 꾸미기 ================= */
@@ -566,34 +616,68 @@
       return `<div class="empty"><div class="big">🔒</div>${msg}<br><button class="btn" id="needLogin">로그인 하기</button></div>`;
     }
     function bindNeedLogin() { const b = $("#needLogin"); if (b) b.onclick = () => openAuth("login"); }
+    const failHtml = `<div class="empty"><div class="big">📡</div>불러오지 못했어요.<br>인터넷을 확인하고 다시 해 주세요.</div>`;
 
-    function openFriendList() {
-      if (!loggedIn()) { openModal(`<h2>👥 친구 목록</h2>${needLoginHtml("로그인하면 친구 목록을 볼 수 있어요.")}`); bindNeedLogin(); return; }
-      const u = me();
-      const friends = u.friends.filter(f => DB.users[f]);
+    async function openFriendList() {
+      if (!ME) { openModal(`<h2>👥 친구 목록</h2>${needLoginHtml("로그인하면 친구 목록을 볼 수 있어요.")}`); bindNeedLogin(); return; }
+      openModal(`<h2>👥 친구 목록</h2><div class="loading">불러오는 중…</div>`);
+      const tok = modalTok;
+      const [friends] = await Promise.all([fetchFriends(), refreshMyStats()]);
+      if (tok !== modalTok) return;
+      if (!friends) { openModal(`<h2>👥 친구 목록</h2>${failHtml}`); return; }
+      const u = ME;
       openModal(`
         <h2>👥 친구 목록</h2>
-        <div class="me-card">${avatarHtml(u.avatar, 52)}<div><b>${esc(DB.session)} (나)</b><small>최고 ${u.best}점 · 단어장 ${myWords().length}개</small></div></div>
-        ${friends.length ? friends.map(f => { const x = DB.users[f]; return `
+        <div class="me-card">${avatarHtml(u.avatar, 52)}<div><b>${esc(u.username)} (나)</b><small>최고 ${u.best}점 · 누적 ${u.total}점 · 단어장 ${myWords().length}개</small></div></div>
+        ${friends.length ? friends.map(x => `
           <div class="person">${avatarHtml(x.avatar, 42)}
-            <div class="who"><b>${esc(f)}</b><small>최고 ${x.best}점 · 누적 ${x.total}점</small></div>
-            <button class="icon-btn del" data-f="${esc(f)}" title="친구 삭제">✕</button>
-          </div>`; }).join("")
+            <div class="who"><b>${esc(x.username)}</b><small>최고 ${x.best}점 · 누적 ${x.total}점</small></div>
+            <button class="icon-btn del" data-f="${esc(x.id)}" data-n="${esc(x.username)}" title="친구 삭제">✕</button>
+          </div>`).join("")
           : `<div class="empty"><div class="big">🫥</div>아직 친구가 없어요.<br>아래 <b>'친구 추가'</b> 버튼에서 아이디로 찾아보세요!</div>`}
-        <div class="fab-row" style="justify-content:space-between;align-items:center">
+        <div style="text-align:center;margin-top:18px"><button class="danger-link" id="delProfile">이 프로필 삭제</button></div>
+        <div class="fab-row">
           <button class="btn ghost" id="openPw">🔒 비밀번호 고치기</button>
           <button class="btn" id="openAvatar">🎨 프로필</button>
         </div>`);
-      $("#openPw").onclick = () => openPwCheck();
-      $("#modalBody").querySelectorAll("[data-f]").forEach(b => b.onclick = () => {
-        removeFriend(b.dataset.f); openFriendList(); toast("친구를 삭제했어요");
+      $("#delProfile").onclick = openDeleteProfile;
+      $("#modalBody").querySelectorAll("[data-f]").forEach(b => b.onclick = async () => {
+        const { error } = await sb.rpc("remove_friend", { p_friend: b.dataset.f });
+        if (error) return toast("삭제하지 못했어요");
+        toast(`${b.dataset.n}님을 친구에서 삭제했어요`); openFriendList();
       });
+      $("#openPw").onclick = openPwCheck;
       $("#openAvatar").onclick = openAvatarEditor;
     }
 
+    /* ---------- 프로필(계정) 삭제: 아이디를 직접 입력해야 지워져요 ---------- */
+    function openDeleteProfile() {
+      const name = ME.username;
+      openModal(`
+        <h2 style="color:var(--bad)">⚠️ 프로필 삭제</h2>
+        <p style="line-height:1.6;margin-bottom:12px"><b>${esc(name)}</b> 계정을 지우면 <b>점수, 내 단어장, 친구 목록, 아바타가 모두 사라지고 되돌릴 수 없어요.</b></p>
+        <form id="delForm" autocomplete="off">
+          <label class="field">정말 지우려면 아이디 <b>${esc(name)}</b>를 입력하세요
+            <input id="dName" autocapitalize="off" spellcheck="false" placeholder="${esc(name)}">
+          </label>
+          <div class="err" id="dErr"></div>
+          <button class="btn full" type="submit" id="dGo" style="background:var(--bad)">영구 삭제</button>
+          <button class="btn ghost full" type="button" id="dCancel" style="margin-top:8px">취소</button>
+        </form>`);
+      $("#dCancel").onclick = openFriendList;
+      $("#delForm").onsubmit = async e => {
+        e.preventDefault();
+        if ($("#dName").value.trim().toLowerCase() !== name) { $("#dErr").textContent = "아이디가 맞지 않아요. 다시 입력해 주세요."; return; }
+        $("#dGo").disabled = true; $("#dGo").textContent = "지우는 중…";
+        const { error } = await sb.rpc("delete_my_account");
+        if (error) { $("#dGo").disabled = false; $("#dGo").textContent = "영구 삭제"; $("#dErr").textContent = "삭제하지 못했어요. 인터넷을 확인하거나 잠시 뒤 다시 해 주세요."; return; }
+        await sb.auth.signOut(); ME = null; closeModal(); refreshAll(); toast("프로필을 삭제했어요. 그동안 고마웠어요 👋");
+      };
+    }
+
     function openAvatarEditor() {
-      const u = me(), total = u.total;
-      const draft = { ...(u.avatar || DEFAULT_AVATAR) };
+      const u = ME, total = u.total;
+      const draft = cleanAvatar(u.avatar);
       const nextNeed = [...FACES, ...ACCS].map(x => x.need).filter(n => n > total).sort((a, b) => a - b)[0];
       const itemBtn = x => {
         const open = isOpen(x, total);
@@ -629,10 +713,14 @@
       $("#bgGrid").onclick = pick("bg");
       $("#accGrid").onclick = pick("acc");
       $("#avBack").onclick = openFriendList;
-      $("#avSave").onclick = () => {
+      $("#avSave").onclick = async () => {
         const f = FACES.find(x => x.e === draft.face), a = ACCS.find(x => x.e === draft.acc);
         if ((f && !isOpen(f, total)) || (a && !isOpen(a, total))) { toast("아직 잠겨 있는 아바타예요 🔒"); return; }
-        u.avatar = draft; save(); renderHeader(); openFriendList(); toast("프로필을 저장했어요 ✨"); };
+        $("#avSave").disabled = true;
+        const { error } = await sb.from("profiles").update({ avatar: draft }).eq("id", u.id);
+        if (error) { $("#avSave").disabled = false; toast("저장하지 못했어요. 다시 해 주세요"); return; }
+        u.avatar = draft; renderHeader(); openFriendList(); toast("프로필을 저장했어요 ✨");
+      };
       draw();
     }
 
@@ -646,61 +734,49 @@
             <small>원래 비밀번호가 맞으면 새 비밀번호를 정하는 창이 열려요.</small>
           </label>
           <div class="err" id="pErr"></div>
-          <button class="btn full" type="submit">확인</button>
+          <button class="btn full" type="submit" id="pGo">확인</button>
           <button class="btn ghost full" type="button" id="pCancel" style="margin-top:8px">← 친구 목록</button>
         </form>`);
       $("#pCancel").onclick = openFriendList;
       $("#pwCheckForm").onsubmit = async e => {
         e.preventDefault();
-        const pw = $("#pOld").value, u = me();
+        const pw = $("#pOld").value;
         if (!pw) { $("#pErr").textContent = "원래 비밀번호를 입력해 주세요."; return; }
-        try {
-          if ((await hashPw(pw, u.salt)) !== u.hash) { $("#pErr").textContent = "원래 비밀번호가 맞지 않아요."; return; }
-        } catch (err) { $("#pErr").textContent = "이 환경에서는 비밀번호를 고칠 수 없어요."; return; }
-        openPwNew();
+        $("#pGo").disabled = true;
+        const { error } = await sb.auth.signInWithPassword({ email: emailOf(ME.username), password: pw });
+        if (error) { $("#pGo").disabled = false; $("#pErr").textContent = /invalid login/i.test(error.message) ? "원래 비밀번호가 맞지 않아요." : authMsg(error); return; }
+        openPwNew(pw);
       };
       setTimeout(() => $("#pOld").focus(), 50);
     }
-    function openPwNew() {
+    function openPwNew(oldPw) {
       openModal(`
         <h2>🔑 새 비밀번호 정하기</h2>
         <form id="pwNewForm" autocomplete="off">
           <label class="field">새 비밀번호
             <input id="pNew" type="password" placeholder="새 비밀번호">
-            <small>4자 이상</small>
+            <small>${MIN_PW}자 이상</small>
           </label>
           <label class="field">새 비밀번호 확인<input id="pNew2" type="password" placeholder="새 비밀번호 다시 입력"></label>
           <div class="err" id="pErr"></div>
-          <button class="btn full" type="submit">비밀번호 바꾸기</button>
+          <button class="btn full" type="submit" id="pGo">비밀번호 바꾸기</button>
         </form>`);
       $("#pwNewForm").onsubmit = async e => {
         e.preventDefault();
-        const a = $("#pNew").value, b = $("#pNew2").value, u = me();
-        if (a.length < 4) { $("#pErr").textContent = "새 비밀번호는 4자 이상이어야 해요."; return; }
+        const a = $("#pNew").value, b = $("#pNew2").value;
+        if (a.length < MIN_PW) { $("#pErr").textContent = `새 비밀번호는 ${MIN_PW}자 이상이어야 해요.`; return; }
         if (a !== b) { $("#pErr").textContent = "새 비밀번호 확인이 일치하지 않아요."; return; }
-        try {
-          if ((await hashPw(a, u.salt)) === u.hash) { $("#pErr").textContent = "원래 비밀번호와 같아요. 다른 비밀번호를 정해 주세요."; return; }
-          const salt = newSalt(); u.hash = await hashPw(a, salt); u.salt = salt;
-        } catch (err) { $("#pErr").textContent = "이 환경에서는 비밀번호를 고칠 수 없어요."; return; }
-        save(); openFriendList(); toast("비밀번호를 바꿨어요 🔒");
+        if (a === oldPw) { $("#pErr").textContent = "원래 비밀번호와 같아요. 다른 비밀번호를 정해 주세요."; return; }
+        $("#pGo").disabled = true;
+        const { error } = await sb.auth.updateUser({ password: a });
+        if (error) { $("#pGo").disabled = false; $("#pErr").textContent = authMsg(error); return; }
+        openFriendList(); toast("비밀번호를 바꿨어요 🔒");
       };
       setTimeout(() => $("#pNew").focus(), 50);
     }
 
-    function removeFriend(fid) {
-      const u = me(); u.friends = u.friends.filter(x => x !== fid);
-      const o = DB.users[fid]; if (o) o.friends = o.friends.filter(x => x !== DB.session);
-      save();
-    }
-    function addFriend(fid) {
-      const u = me(), o = DB.users[fid];
-      if (!o || fid === DB.session || u.friends.includes(fid)) return;
-      u.friends.push(fid); if (!o.friends.includes(DB.session)) o.friends.push(DB.session);
-      save();
-    }
-
     /* ================= 하단 메뉴 / 화면 전환 ================= */
-    let currentView = "cards";
+    let currentView = "cards", viewTok = 0;
     function show(view) {
       currentView = view;
       document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + view));
@@ -709,6 +785,7 @@
       window.scrollTo(0, 0);
     }
     function renderView() {
+      viewTok++;
       if (currentView === "mine") renderMine();
       else if (currentView === "quiz") renderQuizStart();
       else if (currentView === "add") renderAdd();
@@ -873,22 +950,30 @@
       nb.style.display = "block"; nb.textContent = last ? "결과 보기 🏁" : "다음 문제 ▶";
       nb.onclick = () => { if (last) finishQuiz(); else { quiz.i++; renderQuestion(); } };
     }
-    function finishQuiz() {
-      const { score, qs, wrong } = quiz, u = me();
-      const newBest = score > u.best;
-      const before = unlockedKeys(u.total);
-      if (newBest) u.best = score;
-      u.total += score; save();
-      const fresh = unlockedKeys(u.total).filter(k => !before.includes(k));
+    async function finishQuiz() {
+      const { score, qs, wrong } = quiz;
       const max = qs.length * 10;
+      $("#quizBox").innerHTML = `<div class="panel"><div class="loading">점수를 저장하는 중…</div></div>`;
+      const u = me(), prevBest = u.best, prevTotal = u.total;
+      let saved = true;
+      if (ME) {
+        const { data, error } = await sb.rpc("submit_score", { p_score: score });
+        if (error || !data) saved = false;
+        else { ME.best = data.best; ME.total = data.total; }
+      } else {
+        guest.best = Math.max(guest.best, score); guest.total += score; saveGuest();
+      }
+      const nowBest = me().best, nowTotal = me().total;
+      const newBest = nowBest > prevBest;
+      const fresh = unlockedKeys(nowTotal).filter(k => !unlockedKeys(prevTotal).includes(k));
       const msg = score === max ? "완벽해요! 🏆" : score >= max * 0.7 ? "잘했어요! 👏" : "조금만 더 연습해요 💪";
       $("#quizBox").innerHTML = `
         <div class="panel">
           <h2>${msg}</h2>
           <div class="score-big">${score}<small> / ${max}점</small></div>
-          <p style="margin-top:6px">${newBest ? "🎖 최고 점수를 새로 세웠어요!" : `최고 점수 ${u.best}점`}<br>누적 점수 ${u.total}점
-            ${loggedIn() ? "" : "<br><small>로그인하면 친구 리그에서 점수를 겨룰 수 있어요!</small>"}</p>
-          ${fresh.length ? `<div class="lockmsg" style="background:#eaf7ee;border-color:var(--good);color:#1f6b3d">🎉 새 아바타가 열렸어요!<br><span style="font-size:1.8rem">${fresh.join(" ")}</span><br><small>${loggedIn() ? "프로필 → 🎨 프로필에서 꾸며 보세요" : "로그인하면 프로필을 꾸밀 수 있어요"}</small></div>` : ""}
+          <p style="margin-top:6px">${!saved ? "⚠️ 점수를 서버에 저장하지 못했어요. 인터넷을 확인해 주세요." : newBest ? "🎖 최고 점수를 새로 세웠어요!" : `최고 점수 ${nowBest}점`}<br>누적 점수 ${nowTotal}점
+            ${ME ? "" : "<br><small>로그인하면 점수가 저장되고 친구 리그에서 겨룰 수 있어요!</small>"}</p>
+          ${fresh.length ? `<div class="lockmsg" style="background:#eaf7ee;border-color:var(--good);color:#1f6b3d">🎉 새 아바타가 열렸어요!<br><span style="font-size:1.8rem">${fresh.join(" ")}</span><br><small>${ME ? "프로필 → 🎨 프로필에서 꾸며 보세요" : "로그인하면 프로필을 꾸밀 수 있어요"}</small></div>` : ""}
           ${wrong.length ? `<div class="wrongs"><h3>다시 볼 단어</h3>${wrong.map(w => `<div><b>${w.h}</b> ${w.p} — ${w.k}</div>`).join("")}</div>` : ""}
           <div class="row">
             <button class="btn ghost" id="toLeague">🏆 친구 리그</button>
@@ -903,7 +988,7 @@
     let lastQuery = "";
     function renderAdd() {
       const box = $("#addBox");
-      if (!loggedIn()) { box.innerHTML = needLoginHtml("로그인해야 친구를 추가할 수 있어요."); bindNeedLogin(); return; }
+      if (!ME) { box.innerHTML = needLoginHtml("로그인해야 친구를 추가할 수 있어요."); bindNeedLogin(); return; }
       box.innerHTML = `
         <form class="searchbar" id="searchForm">
           <input id="q" placeholder="친구 아이디를 검색하세요" maxlength="12" autocapitalize="off" spellcheck="false" value="${esc(lastQuery)}">
@@ -913,39 +998,53 @@
       $("#searchForm").onsubmit = e => { e.preventDefault(); lastQuery = $("#q").value.trim().toLowerCase(); drawResults(); };
       drawResults();
     }
-    function drawResults() {
-      const out = $("#results");
+    async function drawResults() {
+      const out = $("#results"), tok = viewTok;
       if (!lastQuery) { out.innerHTML = `<div class="empty"><div class="big">🔍</div>친구의 아이디를 입력하고<br>검색해 보세요!</div>`; return; }
-      const u = me();
-      const found = Object.keys(DB.users).filter(id => id !== DB.session && id.includes(lastQuery))
-        .sort((a, b) => (b === lastQuery) - (a === lastQuery) || a.localeCompare(b)).slice(0, 10);
+      out.innerHTML = `<div class="loading">찾는 중…</div>`;
+      const like = lastQuery.replace(/[\\%_]/g, c => "\\" + c);
+      const [res, friends] = await Promise.all([
+        sb.from("profiles").select("id,username,avatar,best,total").ilike("username", `%${like}%`).neq("id", ME.id).limit(10),
+        fetchFriends()
+      ]);
+      if (tok !== viewTok || !$("#results")) return;
+      if (res.error || !friends) { out.innerHTML = failHtml; return; }
+      const friendIds = new Set(friends.map(f => f.id));
+      const found = (res.data || []).sort((a, b) => (b.username === lastQuery) - (a.username === lastQuery) || a.username.localeCompare(b.username));
       if (!found.length) {
-        out.innerHTML = `<div class="empty"><div class="big">🤔</div>'${esc(lastQuery)}' 아이디를 가진 사람을 찾지 못했어요.<br><small>이 앱은 지금 이 브라우저에 가입한 사람만 찾을 수 있어요.</small></div>`;
+        out.innerHTML = `<div class="empty"><div class="big">🤔</div>'${esc(lastQuery)}' 아이디를 가진 사람을 찾지 못했어요.<br><small>아이디를 정확히 입력했는지 확인해 보세요.</small></div>`;
         return;
       }
-      out.innerHTML = found.map(id => { const x = DB.users[id], isF = u.friends.includes(id); return `
+      out.innerHTML = found.map(x => `
         <div class="person">${avatarHtml(x.avatar, 44)}
-          <div class="who"><b>${esc(id)}</b><small>최고 ${x.best}점 · 누적 ${x.total}점</small></div>
-          ${isF ? `<button class="btn small ghost" disabled>✓ 친구</button>` : `<button class="btn small" data-add="${esc(id)}">친구 추가</button>`}
-        </div>`; }).join("");
-      out.querySelectorAll("[data-add]").forEach(b => b.onclick = () => { addFriend(b.dataset.add); toast(`${b.dataset.add}님을 친구로 추가했어요 🎉`); drawResults(); });
+          <div class="who"><b>${esc(x.username)}</b><small>최고 ${x.best}점 · 누적 ${x.total}점</small></div>
+          ${friendIds.has(x.id) ? `<button class="btn small ghost" disabled>✓ 친구</button>` : `<button class="btn small" data-add="${esc(x.username)}">친구 추가</button>`}
+        </div>`).join("");
+      out.querySelectorAll("[data-add]").forEach(b => b.onclick = async () => {
+        b.disabled = true;
+        const { error } = await sb.rpc("add_friend", { p_username: b.dataset.add });
+        if (error) { b.disabled = false; toast("친구를 추가하지 못했어요"); return; }
+        toast(`${b.dataset.add}님을 친구로 추가했어요 🎉`); drawResults();
+      });
     }
 
     /* ================= 5. 친구 리그 ================= */
     let leagueBy = "best";
-    function renderLeague() {
-      const box = $("#leagueBox");
-      if (!loggedIn()) { box.innerHTML = needLoginHtml("로그인하면 친구들과 퀴즈 점수를 겨룰 수 있어요."); bindNeedLogin(); return; }
-      const u = me();
-      const friends = u.friends.filter(f => DB.users[f]);
+    async function renderLeague() {
+      const box = $("#leagueBox"), tok = viewTok;
+      if (!ME) { box.innerHTML = needLoginHtml("로그인하면 친구들과 퀴즈 점수를 겨룰 수 있어요."); bindNeedLogin(); return; }
+      box.innerHTML = `<div class="loading">순위를 불러오는 중…</div>`;
+      const [friends] = await Promise.all([fetchFriends(), refreshMyStats()]);
+      if (tok !== viewTok) return;
+      if (!friends) { box.innerHTML = failHtml; return; }
       if (!friends.length) {
         box.innerHTML = `<div class="empty"><div class="big">🏟️</div>리그에 참가할 친구가 아직 없어요.<br>친구를 추가하면 점수 순위가 나타나요!<br><button class="btn" id="goAdd">➕ 친구 추가하러 가기</button></div>`;
         $("#goAdd").onclick = () => show("add"); return;
       }
-      const rows = [DB.session, ...friends].map(id => ({ id, ...DB.users[id] }));
+      const rows = [{ id: ME.id, username: ME.username, avatar: ME.avatar, best: ME.best, total: ME.total }, ...friends];
       const key = leagueBy, other = key === "best" ? "total" : "best";
-      rows.sort((a, b) => b[key] - a[key] || b[other] - a[other] || a.id.localeCompare(b.id));
-      const myRank = rows.findIndex(r => r.id === DB.session) + 1;
+      rows.sort((a, b) => b[key] - a[key] || b[other] - a[other] || a.username.localeCompare(b.username));
+      const myRank = rows.findIndex(r => r.id === ME.id) + 1;
       const medal = n => ["🥇", "🥈", "🥉"][n - 1] || n;
       box.innerHTML = `
         <div class="chips">
@@ -954,9 +1053,9 @@
         </div>
         <div class="counter">내 순위 <b>${myRank}위</b> / ${rows.length}명</div>
         ${rows.map((r, i) => `
-          <div class="person ${r.id === DB.session ? "me" : ""}">
+          <div class="person ${r.id === ME.id ? "me" : ""}">
             <div class="rank">${medal(i + 1)}</div>${avatarHtml(r.avatar, 42)}
-            <div class="who"><b>${esc(r.id)}${r.id === DB.session ? " (나)" : ""}</b></div>
+            <div class="who"><b>${esc(r.username)}${r.id === ME.id ? " (나)" : ""}</b></div>
             <div class="pts">${r[key]}점<small>${key === "best" ? "누적" : "최고"} ${r[other]}점</small></div>
           </div>`).join("")}
         <p class="counter" style="margin-top:10px">퀴즈를 풀면 점수가 올라가요! 📝</p>`;
@@ -968,6 +1067,12 @@
     renderChips();
     renderCard();
     renderHeader();
+    (async () => {
+      if (!hasServer) return;
+      await loadMe();
+      sb.auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT" && ME) { ME = null; refreshAll(); } });
+      refreshAll();
+    })();
   </script>
 </body>
 </html>
