@@ -249,6 +249,7 @@
       padding: 6px 9px; font-size: .78rem; font-weight: 800; white-space: nowrap;
     }
     .field small { display: block; font-weight: 500; color: var(--muted); margin-top: 3px; }
+    .note { margin-top: 12px; font-size: .8rem; color: var(--muted); line-height: 1.5; text-align: center; }
     .err { color: var(--bad); font-weight: 800; min-height: 22px; margin-bottom: 6px; font-size: .9rem; }
     .switch { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: .9rem; }
     .switch .btn { margin-top: 8px; }
@@ -260,9 +261,14 @@
     .opt-title { font-weight: 800; font-size: .9rem; margin: 12px 0 6px; }
     .grid { display: flex; flex-wrap: wrap; gap: 6px; }
     .grid button {
-      width: 44px; height: 44px; border-radius: 12px; background: #fff; border: 2px solid var(--line);
-      font-size: 1.5rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+      width: 46px; height: 56px; border-radius: 12px; background: #fff; border: 2px solid var(--line);
+      font-size: 1.5rem; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     }
+    .grid button .lk { font-size: .62rem; font-weight: 800; color: var(--muted); min-height: .7rem; line-height: .7rem; }
+    .grid button.locked { background: #f1ebe2; border-style: dashed; }
+    .grid button.locked > span:first-child { filter: grayscale(1); opacity: .45; }
+    .grid button.sw { height: 44px; width: 44px; }
+    .unlock-info { text-align: center; background: #fff8e6; border: 1px solid var(--gold); border-radius: 12px; padding: 9px 10px; font-size: .85rem; color: #6b4a00; margin-bottom: 4px; line-height: 1.5; }
     .grid button.on { border-color: var(--red); background: #fff0ee; }
     .grid button.sw { border-radius: 50%; }
     .grid button.none { font-size: .75rem; font-weight: 800; color: var(--muted); }
@@ -429,6 +435,8 @@
     // 비밀번호 칸마다 '보기/숨기기' 버튼 붙이기
     function addPwToggles(root) {
       root.querySelectorAll('input[type="password"]').forEach(inp => {
+        // 보기 상태(text)에서도 폰이 첫 글자를 대문자로 바꾸거나 자동수정하지 않게
+        inp.setAttribute("autocapitalize", "off"); inp.setAttribute("autocorrect", "off"); inp.setAttribute("spellcheck", "false");
         const wrap = document.createElement("div");
         wrap.className = "pwwrap";
         inp.parentNode.insertBefore(wrap, inp);
@@ -451,12 +459,23 @@
     $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
 
     /* ---------- 아바타 ---------- */
-    const FACES = ["🐱", "🐶", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🦄", "🐲", "🐳", "🐙", "🦋", "😀", "😎", "🥳", "🤓"];
+    // need = 이 아바타를 쓰려면 필요한 누적 점수
+    const FACES = [
+      ["🐱", 0], ["🐶", 0], ["🐭", 0], ["🐹", 0], ["😀", 0],
+      ["🐰", 100], ["🐻", 100], ["🐼", 100], ["🐥", 100],
+      ["🦊", 200], ["🐨", 200], ["🐯", 200], ["😎", 200],
+      ["🐸", 300], ["🐵", 300], ["🐧", 300], ["🐢", 300],
+      ["🥳", 400], ["🐷", 500], ["🐮", 500], ["🦁", 500], ["🐔", 500], ["🦉", 500],
+      ["🤓", 600], ["🦄", 700], ["🐙", 700], ["🦋", 700], ["🐲", 1000], ["🐳", 1000]
+    ].map(([e, need]) => ({ e, need }));
     const BGS = ["#ffd9a8", "#ffc9c9", "#ffe9a3", "#c9f0d3", "#c4e3ff", "#dccaff", "#ffd0ec", "#e3e3e3"];
     const ACCS = [
-      { e: "", pos: "" }, { e: "👑", pos: "top" }, { e: "🎩", pos: "top" }, { e: "🎀", pos: "top" },
-      { e: "🌸", pos: "top" }, { e: "🎧", pos: "top" }, { e: "🕶️", pos: "eyes" }
+      { e: "", pos: "", need: 0 }, { e: "🎀", pos: "top", need: 0 }, { e: "🌸", pos: "top", need: 100 },
+      { e: "🎧", pos: "top", need: 200 }, { e: "🕶️", pos: "eyes", need: 300 },
+      { e: "🎩", pos: "top", need: 500 }, { e: "👑", pos: "top", need: 1000 }
     ];
+    const isOpen = (item, total) => total >= item.need;
+    const unlockedKeys = total => [...FACES, ...ACCS].filter(x => x.e && isOpen(x, total)).map(x => x.e);
     function avatarHtml(a, size = 44) {
       a = a || DEFAULT_AVATAR;
       const acc = ACCS.find(x => x.e === a.acc);
@@ -496,6 +515,7 @@
           <div class="err" id="aErr"></div>
           <button class="btn full" type="submit">${isLogin ? "로그인" : "가입하기"}</button>
         </form>
+        ${isLogin ? `<p class="note">ℹ️ 계정은 가입한 <b>브라우저·기기</b>에만 저장돼요. 다른 기기에서는 새로 가입해야 해요.</p>` : ""}
         <div class="switch">
           ${isLogin ? "아직 계정이 없나요?" : "이미 계정이 있나요?"}
           <button class="btn ghost full" id="switchBtn">${isLogin ? "회원가입" : "로그인으로 돌아가기"}</button>
@@ -510,9 +530,13 @@
       const id = $("#aId").value.trim().toLowerCase(), pw = $("#aPw").value;
       if (!id || !pw) return setErr("아이디와 비밀번호를 입력해 주세요.");
       const u = DB.users[id];
+      if (!u) {
+        const n = Object.keys(DB.users).length;
+        return setErr(`'${id}' 아이디가 이 브라우저에 없어요. 계정은 가입한 브라우저·주소에만 저장돼요. ` +
+          (n ? `(여기에 가입된 계정: ${n}개)` : "(여기에는 가입된 계정이 아직 없어요)"));
+      }
       try {
-        const ok = u && (await hashPw(pw, u.salt)) === u.hash;
-        if (!ok) return setErr("아이디 또는 비밀번호가 맞지 않아요.");
+        if ((await hashPw(pw, u.salt)) !== u.hash) return setErr("비밀번호가 맞지 않아요. 대문자·소문자와 띄어쓰기를 확인해 보세요. (👁 보기로 확인할 수 있어요)");
       } catch (e) { return setErr("이 환경에서는 로그인을 할 수 없어요."); }
       DB.session = id; save(); closeModal(); refreshAll(); toast(`${id}님, 환영해요! 👋`);
     }
@@ -568,8 +592,14 @@
     }
 
     function openAvatarEditor() {
-      const u = me();
+      const u = me(), total = u.total;
       const draft = { ...(u.avatar || DEFAULT_AVATAR) };
+      const nextNeed = [...FACES, ...ACCS].map(x => x.need).filter(n => n > total).sort((a, b) => a - b)[0];
+      const itemBtn = x => {
+        const open = isOpen(x, total);
+        const label = x.e ? `<span style="font-size:1.5rem;line-height:1">${x.e}</span>` : `<span style="font-size:.75rem;font-weight:800;color:var(--muted)">없음</span>`;
+        return `<button class="${open ? "" : "locked"}" data-v="${x.e}" data-need="${x.need}">${label}<span class="lk">${open ? "" : "🔒" + x.need}</span></button>`;
+      };
       const draw = () => {
         $("#avPrev").innerHTML = avatarHtml(draft, 110);
         $("#faceGrid").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === draft.face));
@@ -579,21 +609,30 @@
       openModal(`
         <h2>🎨 프로필 꾸미기</h2>
         <div class="avatar-preview" id="avPrev"></div>
+        <div class="unlock-info">⭐ 누적 점수 <b>${total}점</b>${nextNeed ? ` · 다음 아바타는 <b>${nextNeed}점</b>에 열려요 (${nextNeed - total}점 남음)` : " · 모든 아바타가 열렸어요! 🎉"}</div>
         <div class="opt-title">캐릭터</div>
-        <div class="grid" id="faceGrid">${FACES.map(f => `<button data-v="${f}">${f}</button>`).join("")}</div>
+        <div class="grid" id="faceGrid">${FACES.map(itemBtn).join("")}</div>
         <div class="opt-title">배경 색</div>
         <div class="grid" id="bgGrid">${BGS.map(c => `<button class="sw" data-v="${c}" style="background:${c}"></button>`).join("")}</div>
         <div class="opt-title">꾸미기</div>
-        <div class="grid" id="accGrid">${ACCS.map(a => `<button data-v="${a.e}" class="${a.e ? "" : "none"}">${a.e || "없음"}</button>`).join("")}</div>
+        <div class="grid" id="accGrid">${ACCS.map(itemBtn).join("")}</div>
         <div class="row" style="margin-top:20px">
           <button class="btn ghost" id="avBack">← 친구 목록</button>
           <button class="btn" id="avSave">저장하기</button>
         </div>`);
-      $("#faceGrid").onclick = e => { const b = e.target.closest("button"); if (b) { draft.face = b.dataset.v; draw(); } };
-      $("#bgGrid").onclick = e => { const b = e.target.closest("button"); if (b) { draft.bg = b.dataset.v; draw(); } };
-      $("#accGrid").onclick = e => { const b = e.target.closest("button"); if (b) { draft.acc = b.dataset.v; draw(); } };
+      const pick = key => e => {
+        const b = e.target.closest("button"); if (!b) return;
+        if (b.classList.contains("locked")) { toast(`🔒 누적 ${b.dataset.need}점이 되면 열려요 (지금 ${total}점)`); return; }
+        draft[key] = b.dataset.v; draw();
+      };
+      $("#faceGrid").onclick = pick("face");
+      $("#bgGrid").onclick = pick("bg");
+      $("#accGrid").onclick = pick("acc");
       $("#avBack").onclick = openFriendList;
-      $("#avSave").onclick = () => { u.avatar = draft; save(); renderHeader(); openFriendList(); toast("프로필을 저장했어요 ✨"); };
+      $("#avSave").onclick = () => {
+        const f = FACES.find(x => x.e === draft.face), a = ACCS.find(x => x.e === draft.acc);
+        if ((f && !isOpen(f, total)) || (a && !isOpen(a, total))) { toast("아직 잠겨 있는 아바타예요 🔒"); return; }
+        u.avatar = draft; save(); renderHeader(); openFriendList(); toast("프로필을 저장했어요 ✨"); };
       draw();
     }
 
@@ -837,8 +876,10 @@
     function finishQuiz() {
       const { score, qs, wrong } = quiz, u = me();
       const newBest = score > u.best;
+      const before = unlockedKeys(u.total);
       if (newBest) u.best = score;
       u.total += score; save();
+      const fresh = unlockedKeys(u.total).filter(k => !before.includes(k));
       const max = qs.length * 10;
       const msg = score === max ? "완벽해요! 🏆" : score >= max * 0.7 ? "잘했어요! 👏" : "조금만 더 연습해요 💪";
       $("#quizBox").innerHTML = `
@@ -847,6 +888,7 @@
           <div class="score-big">${score}<small> / ${max}점</small></div>
           <p style="margin-top:6px">${newBest ? "🎖 최고 점수를 새로 세웠어요!" : `최고 점수 ${u.best}점`}<br>누적 점수 ${u.total}점
             ${loggedIn() ? "" : "<br><small>로그인하면 친구 리그에서 점수를 겨룰 수 있어요!</small>"}</p>
+          ${fresh.length ? `<div class="lockmsg" style="background:#eaf7ee;border-color:var(--good);color:#1f6b3d">🎉 새 아바타가 열렸어요!<br><span style="font-size:1.8rem">${fresh.join(" ")}</span><br><small>${loggedIn() ? "프로필 → 🎨 프로필에서 꾸며 보세요" : "로그인하면 프로필을 꾸밀 수 있어요"}</small></div>` : ""}
           ${wrong.length ? `<div class="wrongs"><h3>다시 볼 단어</h3>${wrong.map(w => `<div><b>${w.h}</b> ${w.p} — ${w.k}</div>`).join("")}</div>` : ""}
           <div class="row">
             <button class="btn ghost" id="toLeague">🏆 친구 리그</button>
