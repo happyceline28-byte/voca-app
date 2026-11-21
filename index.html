@@ -14,9 +14,32 @@
       --text: #2b2b2b;
       --muted: #8a8076;
       --line: #eadfcf;
+      --tint: #f6ede0;
+      --soft: #fdf6ec;
       --good: #2e9e5b;
       --bad: #d64545;
     }
+    /* 언어별 배경 색 (디자인은 같고 배경 계열 색만 달라요) */
+    html[data-lang="en"] { --bg: #e6f0fd; --line: #c9dcf4; --tint: #d7e6fa; --soft: #f1f7ff; }
+    html[data-lang="ja"] { --bg: #ffeedb; --line: #f3d5b3; --tint: #fadfc0; --soft: #fff6ec; }
+    html[data-lang="es"] { --bg: #e5f5e8; --line: #c5e4cb; --tint: #d5ecd9; --soft: #f1faf3; }
+    html[data-lang="id"] { --bg: #f0e8fd; --line: #dacdf2; --tint: #e5d9f8; --soft: #f8f3ff; }
+    body { transition: background .3s; }
+    .title-btn { background: none; color: inherit; padding: 2px 4px; border-radius: 10px; white-space: nowrap; display: inline-flex; align-items: baseline; gap: 2px; }
+    .title-btn h1 { display: inline; }
+    @media (max-width: 420px) { header h1 { font-size: 1rem; } header .top-btn { padding: 6px 9px; font-size: .8rem; } }
+    .title-btn .caret { color: var(--muted); font-size: .8rem; margin-left: 2px; }
+    .title-btn:active { background: var(--tint); }
+    .lang-opt {
+      display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+      background: #fff; border: 2px solid var(--line); border-radius: 16px;
+      padding: 12px 14px; margin-bottom: 8px; color: var(--text);
+    }
+    .lang-opt .dot { width: 34px; height: 34px; border-radius: 50%; flex: none; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+    .lang-opt b { display: block; font-size: 1.05rem; }
+    .lang-opt small { color: var(--muted); font-size: .8rem; }
+    .lang-opt.on { border-color: var(--red); background: #fff7f6; }
+    .lang-opt .ck { margin-left: auto; color: var(--red); font-weight: 900; }
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       background: var(--bg);
@@ -57,7 +80,7 @@
     }
     nav button {
       flex: 1; max-width: 100px; min-width: 0;
-      background: #f6ede0; color: var(--muted);
+      background: var(--tint); color: var(--muted);
       border-radius: 12px; padding: 8px 2px;
       font-size: .72rem; font-weight: 800; white-space: nowrap;
       display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -87,7 +110,7 @@
     .row { display: flex; gap: 8px; margin-top: 10px; }
     .row .btn { flex: 1; padding: 12px 6px; }
     .speak {
-      background: #f6ede0; color: var(--red); border-radius: 999px;
+      background: var(--tint); color: var(--red); border-radius: 999px;
       padding: 6px 12px; font-size: .85rem; font-weight: 700;
     }
     .vtitle { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 2px 10px; }
@@ -116,7 +139,7 @@
     .face.back { transform: rotateY(180deg); justify-content: flex-start; padding-top: 28px; }
     .lvtag {
       position: absolute; top: 12px; left: 14px;
-      background: #f6ede0; color: var(--red); font-size: .75rem; font-weight: 800;
+      background: var(--tint); color: var(--red); font-size: .75rem; font-weight: 800;
       padding: 3px 10px; border-radius: 999px;
     }
     .badge-mine { position: absolute; top: 10px; right: 14px; font-size: 1.2rem; }
@@ -126,6 +149,8 @@
       word-break: keep-all;
     }
     .hanzi.long { font-size: clamp(2.4rem, 14vw, 4rem); }
+    .hanzi.xlong { font-size: clamp(1.9rem, 10vw, 2.6rem); overflow-wrap: anywhere; }
+    .hanzi.phrase { font-size: clamp(1.4rem, 7vw, 1.9rem); line-height: 1.35; overflow-wrap: anywhere; word-break: keep-all; }
     .hint { color: var(--muted); font-size: .85rem; margin-top: 18px; }
     .ko { font-size: 1.7rem; font-weight: 800; line-height: 1.35; margin-top: 4px; }
     .ko.long { font-size: 1.2rem; }
@@ -144,12 +169,13 @@
     }
     .item .top { display: flex; align-items: center; gap: 10px; }
     .item .h { font-size: 1.6rem; font-weight: 700; color: var(--red); min-width: 70px; font-family: "Microsoft YaHei", "Noto Sans SC", sans-serif; }
+    .item .h.small { font-size: 1.05rem; min-width: 0; max-width: 46%; line-height: 1.3; overflow-wrap: anywhere; }
     .item .m { flex: 1; min-width: 0; }
     .item .m .p { color: var(--muted); font-size: .85rem; }
     .item .m .k { font-weight: 700; font-size: .95rem; }
     .item .ex { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: .9rem; }
     .item .ex small { color: var(--muted); display: block; }
-    .icon-btn { background: #f6ede0; border-radius: 10px; padding: 7px 9px; font-size: 1rem; }
+    .icon-btn { background: var(--tint); border-radius: 10px; padding: 7px 9px; font-size: 1rem; }
     .icon-btn.del { color: var(--bad); }
 
     /* 퀴즈 */
@@ -165,10 +191,10 @@
       border-radius: 14px; padding: 14px; font-weight: 800; line-height: 1.5; margin-bottom: 12px;
     }
     .stats { display: flex; gap: 10px; margin: 14px 0 18px; }
-    .stat { flex: 1; background: #fdf6ec; border-radius: 14px; padding: 12px 6px; }
+    .stat { flex: 1; background: var(--soft); border-radius: 14px; padding: 12px 6px; }
     .stat b { display: block; font-size: 1.5rem; color: var(--red); }
     .stat span { font-size: .8rem; color: var(--muted); }
-    .progress { height: 8px; background: #f1e6d4; border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
+    .progress { height: 8px; background: var(--tint); border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
     .progress div { height: 100%; background: var(--gold); width: 0; transition: width .3s; }
     .qmeta { display: flex; justify-content: space-between; color: var(--muted); font-size: .9rem; margin-bottom: 4px; }
     .qword { margin: 10px 0 4px; }
@@ -189,7 +215,7 @@
     .score-big small { font-size: 1.3rem; }
     .wrongs { text-align: left; margin: 14px 0; }
     .wrongs h3 { font-size: .95rem; margin-bottom: 6px; }
-    .wrongs div { font-size: .9rem; padding: 6px 10px; background: #fdf6ec; border-radius: 10px; margin-bottom: 4px; }
+    .wrongs div { font-size: .9rem; padding: 6px 10px; background: var(--soft); border-radius: 10px; margin-bottom: 4px; }
 
     /* 아바타 */
     .avatar {
@@ -248,7 +274,7 @@
     .pwwrap input { margin-top: 0; padding-right: 92px; }
     .pwtoggle {
       position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-      background: #f6ede0; color: var(--red); border-radius: 8px;
+      background: var(--tint); color: var(--red); border-radius: 8px;
       padding: 6px 9px; font-size: .78rem; font-weight: 800; white-space: nowrap;
     }
     .field small { display: block; font-weight: 500; color: var(--muted); margin-top: 3px; }
@@ -268,7 +294,7 @@
       font-size: 1.5rem; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     }
     .grid button .lk { font-size: .62rem; font-weight: 800; color: var(--muted); min-height: .7rem; line-height: .7rem; }
-    .grid button.locked { background: #f1ebe2; border-style: dashed; }
+    .grid button.locked { background: var(--tint); border-style: dashed; }
     .grid button.locked > span:first-child { filter: grayscale(1); opacity: .45; }
     .grid button.sw { height: 44px; width: 44px; }
     .grid button.on { border-color: var(--red); background: #fff0ee; }
@@ -288,7 +314,7 @@
   <header>
     <button class="top-btn left" id="profileBtn"></button>
     <div class="mid">
-      <h1>汉语 중국어 단어장</h1>
+      <button class="title-btn" id="langBtn" aria-label="언어 바꾸기"><h1 id="title">汉语 중국어 단어장</h1><span class="caret">▾</span></button>
       <p id="sub"></p>
     </div>
     <button class="top-btn right" id="authBtn">로그인</button>
@@ -376,7 +402,40 @@
     };
     const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    /* ================= 언어 (중국어·영어·일본어·스페인어·속담&사자성어) =================
+       중국어는 words1~3.js 에 들어 있고, 나머지 언어는 고를 때 data/*.js 를 불러와요. */
+    WORDS.forEach(w => { w.lang = "zh"; });
+    window.WORDSETS = window.WORDSETS || {};
+    WORDSETS.zh = WORDS;
     const byId = Object.fromEntries(WORDS.map(w => [w.id, w]));
+    const LANGS = {
+      zh: { name: "중국어", title: "汉语 중국어 단어장", sub: "新 HSK 1~3급 단어 600개", lv: ["1급", "2급", "3급"], all: "전체", tts: "zh-CN", htmlLang: "zh", color: "#e9a77d", desc: "新 HSK 1~3급", files: [] },
+      en: { name: "영어", title: "English 영어 단어장", sub: "영어 1~3단계 단어 600개", lv: ["1단계", "2단계", "3단계"], all: "모두", tts: "en-US", htmlLang: "en", color: "#4f93e8", desc: "기초 → 중급 → 고급", files: ["data/en1.js", "data/en2.js", "data/en3.js"] },
+      ja: { name: "일본어", title: "日本語 일본어 단어장", sub: "일본어 1~3단계 단어 600개", lv: ["1단계", "2단계", "3단계"], all: "모두", tts: "ja-JP", htmlLang: "ja", color: "#f39a3d", desc: "JLPT N5 → N4 → N3", files: ["data/ja1.js", "data/ja2.js", "data/ja3.js"] },
+      es: { name: "스페인어", title: "Español 스페인어 단어장", sub: "스페인어 1~3단계 단어 600개", lv: ["1단계", "2단계", "3단계"], all: "모두", tts: "es-ES", htmlLang: "es", color: "#52b36a", desc: "A1 → A2 → B1", files: ["data/es1.js", "data/es2.js", "data/es3.js"] },
+      id: { name: "속담&사자성어", title: "成語 속담&사자성어", sub: "속담·사자성어 1~3단계 600개", lv: ["1단계", "2단계", "3단계"], all: "모두", tts: "ko-KR", htmlLang: "ko", color: "#9b6fdc", desc: "속담 → 사자성어 → 고사성어", files: ["data/id1.js", "data/id2.js", "data/id3.js"] }
+    };
+    let LANG = store.get("lang", "zh");
+    if (!LANGS[LANG]) LANG = "zh";
+    let CUR = WORDS;                       // 지금 보고 있는 언어의 단어 목록
+    const loadedLangs = { zh: true };
+    function loadScript(src) {
+      return new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = src; s.onload = res; s.onerror = () => rej(new Error("load " + src));
+        document.head.appendChild(s);
+      });
+    }
+    async function loadLang(code) {
+      if (loadedLangs[code]) return true;
+      WORDSETS[code] = [];
+      try {
+        for (const f of LANGS[code].files) await loadScript(f);
+      } catch (e) { delete WORDSETS[code]; return false; }
+      WORDSETS[code].forEach(w => { byId[w.id] = w; });
+      loadedLangs[code] = true;
+      return true;
+    }
 
     /* ================= 서버 연결 (Supabase) =================
        로그인한 사람의 데이터는 서버에 저장돼서 어느 기기에서든 같아요.
@@ -394,7 +453,7 @@
     const saveGuest = () => store.set("guest", guest);
     const loggedIn = () => !!ME;
     const me = () => ME || guest;
-    const myWords = () => me().mine.filter(id => byId[id]);
+    const myWords = () => me().mine.filter(id => byId[id] && byId[id].lang === LANG);   // 지금 언어의 내 단어
     const hasMine = id => me().mine.includes(id);
 
     let mineTimer;
@@ -437,19 +496,18 @@
     }
 
     /* ---------- 소리 ---------- */
-    let zhVoice = null;
-    function pickVoice() {
-      if (!window.speechSynthesis) return;
+    function voiceFor(lang) {
       const vs = speechSynthesis.getVoices();
-      zhVoice = vs.find(v => /zh[-_]CN/i.test(v.lang)) || vs.find(v => /^zh/i.test(v.lang)) || null;
+      const norm = s => s.replace("_", "-").toLowerCase();
+      return vs.find(v => norm(v.lang) === norm(lang)) || vs.find(v => norm(v.lang).startsWith(norm(lang).split("-")[0])) || null;
     }
-    if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
     function speak(text) {
       if (!window.speechSynthesis) { toast("이 브라우저는 소리를 지원하지 않아요"); return; }
       speechSynthesis.cancel();
+      const lang = LANGS[LANG].tts;
       const u = new SpeechSynthesisUtterance(text.replace(/…/g, " "));
-      u.lang = "zh-CN"; u.rate = 0.85;
-      if (zhVoice) u.voice = zhVoice;
+      u.lang = lang; u.rate = 0.85;
+      const v = voiceFor(lang); if (v) u.voice = v;
       speechSynthesis.speak(u);
     }
     let toastTimer;
@@ -527,7 +585,7 @@
     function renderHeader() {
       $("#profileBtn").innerHTML = (ME ? avatarHtml(ME.avatar, 24) : "👤") + " 프로필";
       $("#authBtn").textContent = ME ? "로그아웃" : "로그인";
-      $("#sub").textContent = ME ? `${ME.username}님, 환영해요!` : "新 HSK 1~3급 단어 600개";
+      $("#sub").textContent = ME ? `${ME.username}님, 환영해요!` : LANGS[LANG].sub;
     }
     $("#authBtn").onclick = async () => {
       if (ME) {
@@ -628,7 +686,7 @@
       const u = ME;
       openModal(`
         <h2>👥 친구 목록</h2>
-        <div class="me-card">${avatarHtml(u.avatar, 52)}<div><b>${esc(u.username)} (나)</b><small>최고 ${u.best}점 · 누적 ${u.total}점 · 단어장 ${myWords().length}개</small></div></div>
+        <div class="me-card">${avatarHtml(u.avatar, 52)}<div><b>${esc(u.username)} (나)</b><small>최고 ${u.best}점 · 누적 ${u.total}점 · 단어장 ${u.mine.length}개</small></div></div>
         ${friends.length ? friends.map(x => `
           <div class="person">${avatarHtml(x.avatar, 42)}
             <div class="who"><b>${esc(x.username)}</b><small>최고 ${x.best}점 · 누적 ${x.total}점</small></div>
@@ -795,20 +853,26 @@
     document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.view));
 
     /* ================= 1. 플래시카드 ================= */
-    const LV_NAMES = { 0: "전체", 1: "1급", 2: "2급", 3: "3급" };
-    let level = store.get("level", 0);
+    const lvKey = () => (LANG === "zh" ? "level" : "level_" + LANG);
+    const posKey = () => (LANG === "zh" ? "pos" : "pos_" + LANG);
+    let level = store.get(lvKey(), 0);
     let order = [], idx = 0, isShuffled = false;
+    const sayText = w => (LANG === "id" && w.lv >= 2 && w.p ? w.p : w.h);   // 사자성어(2·3단계)는 한글 독음으로 읽어 줘요
+    const say = w => speak(sayText(w));
+    // 글자 길이에 맞춰 크기를 줄여요 (속담처럼 긴 문장도 카드 안에 들어가게)
+    const hanziSize = t => (t.length <= 3 ? "" : t.length <= 8 ? "long" : t.length <= 14 ? "xlong" : "phrase");
 
     function buildDeck(keepId) {
-      let list = WORDS.filter(w => level === 0 || w.lv === level);
+      let list = CUR.filter(w => level === 0 || w.lv === level);
       if (isShuffled) list = shuffle(list);
       order = list.map(w => w.id);
       idx = keepId && order.includes(keepId) ? order.indexOf(keepId) : 0;
     }
     function renderChips() {
-      $("#levelChips").innerHTML = [0, 1, 2, 3].map(l => `<button class="chip ${l === level ? "on" : ""}" data-l="${l}">${LV_NAMES[l]}</button>`).join("");
+      const L = LANGS[LANG], names = [L.all, ...L.lv];
+      $("#levelChips").innerHTML = [0, 1, 2, 3].map(l => `<button class="chip ${l === level ? "on" : ""}" data-l="${l}">${names[l]}</button>`).join("");
       document.querySelectorAll("#levelChips .chip").forEach(c => c.onclick = () => {
-        level = +c.dataset.l; store.set("level", level); buildDeck(); renderChips(); renderCard();
+        level = +c.dataset.l; store.set(lvKey(), level); buildDeck(); renderChips(); renderCard();
       });
     }
     const cur = () => byId[order[idx]];
@@ -816,14 +880,59 @@
       const w = cur();
       $("#card").classList.remove("flipped");
       $("#counter").textContent = `${idx + 1} / ${order.length}`;
-      const hz = $("#hanzi"); hz.textContent = w.h; hz.classList.toggle("long", w.h.length > 3);
+      const hz = $("#hanzi"); hz.textContent = w.h; hz.lang = LANGS[LANG].htmlLang;
+      hz.className = "hanzi " + hanziSize(w.h);
       const ko = $("#ko"); ko.textContent = w.k; ko.classList.toggle("long", w.k.length > 14);
       $("#py").textContent = w.p;
-      $("#exZh").textContent = w.e; $("#exKo").textContent = w.t;
-      $("#lvTagF").textContent = $("#lvTagB").textContent = w.lv + "급";
+      $("#exZh").textContent = w.e; $("#exZh").lang = LANGS[LANG].htmlLang;
+      $("#exKo").textContent = w.t; $("#exKo").style.display = w.t ? "" : "none";
+      $("#lvTagF").textContent = $("#lvTagB").textContent = LANGS[LANG].lv[w.lv - 1];
       updateMineUi();
-      store.set("pos", w.id);
+      store.set(posKey(), w.id);
     }
+
+    /* ---------- 언어 바꾸기: 제목을 누르면 열려요 ---------- */
+    function applyLangUi() {
+      const L = LANGS[LANG];
+      document.documentElement.dataset.lang = LANG;
+      $("#title").textContent = L.title;
+      document.title = L.name + " 단어장";
+      renderHeader();
+    }
+    async function setLang(code, first) {
+      if (!LANGS[code]) code = "zh";
+      if (!loadedLangs[code]) {
+        toast(`${LANGS[code].name} 단어를 불러오는 중…`);
+        const ok = await loadLang(code);
+        if (!ok) { toast("단어를 불러오지 못했어요. 인터넷을 확인해 주세요"); return false; }
+      }
+      LANG = code; store.set("lang", code); CUR = WORDSETS[code];
+      level = store.get(lvKey(), 0); isShuffled = false; $("#shuffle").textContent = "🔀 섞기";
+      buildDeck(store.get(posKey(), null));
+      applyLangUi(); renderChips(); renderCard();
+      renderView();
+      if (!first) toast(`${LANGS[code].name} 단어장으로 바꿨어요`);
+      return true;
+    }
+    function openLangPicker() {
+      openModal(`
+        <h2>🌏 언어 고르기</h2>
+        ${Object.entries(LANGS).map(([c, L]) => `
+          <button class="lang-opt ${c === LANG ? "on" : ""}" data-c="${c}">
+            <span class="dot" style="background:${L.color}"></span>
+            <span><b>${L.name}</b><small>${L.desc} · 600개</small></span>
+            ${c === LANG ? `<span class="ck">✓</span>` : ""}
+          </button>`).join("")}
+        <p class="note">언어마다 내 단어장이 따로 있어요. 점수는 모두 합쳐져요.</p>`);
+      $("#modalBody").querySelectorAll(".lang-opt").forEach(b => b.onclick = async () => {
+        const c = b.dataset.c;
+        if (c === LANG) { closeModal(); return; }
+        b.disabled = true;
+        const ok = await setLang(c);
+        if (ok) closeModal(); else b.disabled = false;
+      });
+    }
+    $("#langBtn").onclick = openLangPicker;
     function updateMineUi() {
       const w = cur(), has = hasMine(w.id);
       $("#mineF").textContent = $("#mineB").textContent = has ? "⭐" : "";
@@ -833,12 +942,12 @@
     }
     function flip() {
       const c = $("#card"); c.classList.toggle("flipped");
-      if (c.classList.contains("flipped")) speak(cur().h);
+      if (c.classList.contains("flipped")) say(cur());
     }
     function move(d) { idx = (idx + d + order.length) % order.length; renderCard(); }
     $("#card").onclick = e => { if (e.target.closest("button")) return; flip(); };
     $("#speakEx").onclick = e => { e.stopPropagation(); speak(cur().e); };
-    $("#speakWord").onclick = () => speak(cur().h);
+    $("#speakWord").onclick = () => say(cur());
     $("#prev").onclick = () => move(-1);
     $("#next").onclick = () => move(1);
     $("#shuffle").onclick = () => {
@@ -871,7 +980,7 @@
       box.innerHTML = list.map(w => `
         <div class="item" data-id="${w.id}">
           <div class="top">
-            <div class="h">${w.h}</div>
+            <div class="h ${w.h.length > 5 ? "small" : ""}" lang="${LANGS[LANG].htmlLang}">${esc(w.h)}</div>
             <div class="m"><div class="p">${w.p}</div><div class="k">${w.k}</div></div>
             <button class="icon-btn" data-a="say" title="발음">🔊</button>
             <button class="icon-btn del" data-a="del" title="빼기">✕</button>
@@ -880,7 +989,7 @@
         </div>`).join("");
       box.querySelectorAll(".item").forEach(el => {
         const w = byId[el.dataset.id];
-        el.querySelector('[data-a="say"]').onclick = () => speak(w.h);
+        el.querySelector('[data-a="say"]').onclick = () => say(w);
         el.querySelector(".ex").onclick = () => speak(w.e);
         el.querySelector('[data-a="del"]').onclick = () => { toggleMine(w.id); renderMine(); updateMineUi(); toast(`'${w.h}' 를 뺐어요`); };
       });
@@ -894,7 +1003,7 @@
       $("#quizBox").innerHTML = `
         <div class="panel">
           <h2>📝 단어 퀴즈</h2>
-          <p>내 단어장의 단어 <b>${Q_NEED}개</b>로 문제를 내요.<br>한자를 보고 알맞은 뜻을 고르세요!<br>정답 1개당 <b>10점</b>이에요.</p>
+          <p>내 단어장의 단어 <b>${Q_NEED}개</b>로 문제를 내요.<br>문제를 보고 알맞은 뜻을 고르세요!<br>정답 1개당 <b>10점</b>이에요.</p>
           <div class="stats">
             <div class="stat"><b>${n}</b><span>내 단어장</span></div>
             <div class="stat"><b>${u.best}</b><span>최고 점수</span></div>
@@ -915,7 +1024,9 @@
       quiz = {
         i: 0, score: 0, wrong: [], answered: false,
         qs: picked.map(w => {
-          const others = shuffle(WORDS.filter(o => o.k !== w.k)).slice(0, 3).map(o => o.k);
+          // 오답 보기 3개: 정답과 뜻이 다르고, 서로도 겹치지 않게
+          const seen = new Set([w.k]), others = [];
+          for (const o of shuffle(CUR)) { if (!seen.has(o.k)) { seen.add(o.k); others.push(o.k); if (others.length === 3) break; } }
           return { w, choices: shuffle([w.k, ...others]) };
         })
       };
@@ -928,13 +1039,13 @@
         <div class="panel">
           <div class="qmeta"><span>문제 ${i + 1} / ${qs.length}</span><span>점수 ${quiz.score}</span></div>
           <div class="progress"><div style="width:${(i / qs.length) * 100}%"></div></div>
-          <div class="qword"><div class="hanzi ${w.h.length > 3 ? "long" : ""}">${w.h}</div><div class="py">${w.p}</div></div>
+          <div class="qword"><div class="hanzi ${hanziSize(w.h)}" lang="${LANGS[LANG].htmlLang}">${esc(w.h)}</div><div class="py">${esc(w.p)}</div></div>
           <button class="speak" id="qSpeak" style="margin-top:8px">🔊 듣기</button>
           <div class="choices">${q.choices.map((c, n) => `<button class="choice" data-n="${n}">${c}</button>`).join("")}</div>
           <div class="feedback" id="fb"></div>
           <button class="btn full" id="nextQ" style="display:none;margin-top:8px"></button>
         </div>`;
-      $("#qSpeak").onclick = () => speak(w.h);
+      $("#qSpeak").onclick = () => say(w);
       document.querySelectorAll(".choice").forEach(b => b.onclick = () => answer(b));
     }
     function answer(btn) {
@@ -945,7 +1056,7 @@
       const fb = $("#fb");
       if (ok) { quiz.score += 10; fb.textContent = "정답! 🎉 +10점"; fb.className = "feedback ok"; }
       else { btn.classList.add("wrong"); quiz.wrong.push(q.w); fb.textContent = "아쉬워요 😢 정답은 초록색이에요"; fb.className = "feedback no"; }
-      speak(q.w.h);
+      say(q.w);
       const last = quiz.i === quiz.qs.length - 1, nb = $("#nextQ");
       nb.style.display = "block"; nb.textContent = last ? "결과 보기 🏁" : "다음 문제 ▶";
       nb.onclick = () => { if (last) finishQuiz(); else { quiz.i++; renderQuestion(); } };
@@ -1066,8 +1177,10 @@
     buildDeck(store.get("pos", null));
     renderChips();
     renderCard();
-    renderHeader();
+    applyLangUi();
     (async () => {
+      // 마지막에 쓰던 언어로 열어요 (중국어가 아니면 단어 파일을 먼저 불러와요)
+      if (LANG !== "zh") { const saved = LANG; LANG = "zh"; if (!(await setLang(saved, true))) { await setLang("zh", true); } }
       if (!hasServer) return;
       await loadMe();
       sb.auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT" && ME) { ME = null; refreshAll(); } });

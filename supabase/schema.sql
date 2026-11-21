@@ -14,7 +14,7 @@ create table if not exists public.profiles (
 
 create table if not exists public.word_lists (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  mine    text[] not null default '{}' check (cardinality(mine) <= 700)
+  mine    text[] not null default '{}' check (cardinality(mine) <= 3000)
 );
 
 create table if not exists public.friendships (
@@ -129,3 +129,7 @@ revoke all on function public.remove_friend(uuid) from public, anon;
 grant execute on function public.submit_score(int)   to authenticated;
 grant execute on function public.add_friend(text)    to authenticated;
 grant execute on function public.remove_friend(uuid) to authenticated;
+
+-- (이미 만든 데이터베이스용) 여러 언어를 쓰면서 단어장 한도를 3000개로 늘렸어요
+alter table public.word_lists drop constraint if exists word_lists_mine_check;
+alter table public.word_lists add constraint word_lists_mine_check check (cardinality(mine) <= 3000);
