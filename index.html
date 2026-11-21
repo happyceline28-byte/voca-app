@@ -241,6 +241,13 @@
       display: block; width: 100%; margin-top: 5px;
       border: 2px solid var(--line); border-radius: 12px; padding: 12px; font-size: 1rem; background: #fff;
     }
+    .pwwrap { position: relative; margin-top: 5px; }
+    .pwwrap input { margin-top: 0; padding-right: 92px; }
+    .pwtoggle {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      background: #f6ede0; color: var(--red); border-radius: 8px;
+      padding: 6px 9px; font-size: .78rem; font-weight: 800; white-space: nowrap;
+    }
     .field small { display: block; font-weight: 500; color: var(--muted); margin-top: 3px; }
     .err { color: var(--bad); font-weight: 800; min-height: 22px; margin-bottom: 6px; font-size: .9rem; }
     .switch { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: .9rem; }
@@ -415,7 +422,30 @@
     }
 
     /* ---------- 모달 ---------- */
-    function openModal(html) { $("#modalBody").innerHTML = html; $("#modal").classList.add("open"); $(".sheet").scrollTop = 0; }
+    function openModal(html) {
+      $("#modalBody").innerHTML = html; $("#modal").classList.add("open"); $(".sheet").scrollTop = 0;
+      addPwToggles($("#modalBody"));
+    }
+    // 비밀번호 칸마다 '보기/숨기기' 버튼 붙이기
+    function addPwToggles(root) {
+      root.querySelectorAll('input[type="password"]').forEach(inp => {
+        const wrap = document.createElement("div");
+        wrap.className = "pwwrap";
+        inp.parentNode.insertBefore(wrap, inp);
+        wrap.appendChild(inp);
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "pwtoggle"; b.textContent = "👁 보기";
+        b.setAttribute("aria-label", "비밀번호 보기");
+        b.onclick = () => {
+          const show = inp.type === "password";
+          inp.type = show ? "text" : "password";
+          b.textContent = show ? "🙈 숨기기" : "👁 보기";
+          b.setAttribute("aria-label", show ? "비밀번호 숨기기" : "비밀번호 보기");
+          inp.focus();
+        };
+        wrap.appendChild(b);
+      });
+    }
     function closeModal() { $("#modal").classList.remove("open"); }
     $("#modalX").onclick = closeModal;
     $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
@@ -526,7 +556,11 @@
             <button class="icon-btn del" data-f="${esc(f)}" title="친구 삭제">✕</button>
           </div>`; }).join("")
           : `<div class="empty"><div class="big">🫥</div>아직 친구가 없어요.<br>아래 <b>'친구 추가'</b> 버튼에서 아이디로 찾아보세요!</div>`}
-        <div class="fab-row"><button class="btn" id="openAvatar">🎨 프로필</button></div>`);
+        <div class="fab-row" style="justify-content:space-between;align-items:center">
+          <button class="btn ghost" id="openPw">🔒 비밀번호 고치기</button>
+          <button class="btn" id="openAvatar">🎨 프로필</button>
+        </div>`);
+      $("#openPw").onclick = () => openPwCheck();
       $("#modalBody").querySelectorAll("[data-f]").forEach(b => b.onclick = () => {
         removeFriend(b.dataset.f); openFriendList(); toast("친구를 삭제했어요");
       });
@@ -561,6 +595,57 @@
       $("#avBack").onclick = openFriendList;
       $("#avSave").onclick = () => { u.avatar = draft; save(); renderHeader(); openFriendList(); toast("프로필을 저장했어요 ✨"); };
       draw();
+    }
+
+    /* ---------- 비밀번호 고치기: 1) 원래 비밀번호 확인 → 2) 새 비밀번호 입력 ---------- */
+    function openPwCheck() {
+      openModal(`
+        <h2>🔒 비밀번호 고치기</h2>
+        <form id="pwCheckForm" autocomplete="off">
+          <label class="field">원래 비밀번호
+            <input id="pOld" type="password" placeholder="지금 쓰는 비밀번호">
+            <small>원래 비밀번호가 맞으면 새 비밀번호를 정하는 창이 열려요.</small>
+          </label>
+          <div class="err" id="pErr"></div>
+          <button class="btn full" type="submit">확인</button>
+          <button class="btn ghost full" type="button" id="pCancel" style="margin-top:8px">← 친구 목록</button>
+        </form>`);
+      $("#pCancel").onclick = openFriendList;
+      $("#pwCheckForm").onsubmit = async e => {
+        e.preventDefault();
+        const pw = $("#pOld").value, u = me();
+        if (!pw) { $("#pErr").textContent = "원래 비밀번호를 입력해 주세요."; return; }
+        try {
+          if ((await hashPw(pw, u.salt)) !== u.hash) { $("#pErr").textContent = "원래 비밀번호가 맞지 않아요."; return; }
+        } catch (err) { $("#pErr").textContent = "이 환경에서는 비밀번호를 고칠 수 없어요."; return; }
+        openPwNew();
+      };
+      setTimeout(() => $("#pOld").focus(), 50);
+    }
+    function openPwNew() {
+      openModal(`
+        <h2>🔑 새 비밀번호 정하기</h2>
+        <form id="pwNewForm" autocomplete="off">
+          <label class="field">새 비밀번호
+            <input id="pNew" type="password" placeholder="새 비밀번호">
+            <small>4자 이상</small>
+          </label>
+          <label class="field">새 비밀번호 확인<input id="pNew2" type="password" placeholder="새 비밀번호 다시 입력"></label>
+          <div class="err" id="pErr"></div>
+          <button class="btn full" type="submit">비밀번호 바꾸기</button>
+        </form>`);
+      $("#pwNewForm").onsubmit = async e => {
+        e.preventDefault();
+        const a = $("#pNew").value, b = $("#pNew2").value, u = me();
+        if (a.length < 4) { $("#pErr").textContent = "새 비밀번호는 4자 이상이어야 해요."; return; }
+        if (a !== b) { $("#pErr").textContent = "새 비밀번호 확인이 일치하지 않아요."; return; }
+        try {
+          if ((await hashPw(a, u.salt)) === u.hash) { $("#pErr").textContent = "원래 비밀번호와 같아요. 다른 비밀번호를 정해 주세요."; return; }
+          const salt = newSalt(); u.hash = await hashPw(a, salt); u.salt = salt;
+        } catch (err) { $("#pErr").textContent = "이 환경에서는 비밀번호를 고칠 수 없어요."; return; }
+        save(); openFriendList(); toast("비밀번호를 바꿨어요 🔒");
+      };
+      setTimeout(() => $("#pNew").focus(), 50);
     }
 
     function removeFriend(fid) {
